@@ -1,0 +1,582 @@
+/*
+ * Mermaid Kit — the stage, its header band, the overlay, and the template
+ * picker. One look for every theme: a silent header band over a framed
+ * figure, no grid, no floating instrument chrome.
+ *
+ * Colours and radii come from Obsidian's own variables, so the chrome
+ * follows the active theme without the theme knowing about the plugin.
+ *
+ * The host is the `.mermaid` element Obsidian renders, and themes style
+ * that element for the plain, unstaged figure: paddings, breakout widths,
+ * transforms, scrollers. Theme CSS loads after plugin CSS, so the rules the
+ * stage cannot work without are written one class stronger than a theme's
+ * usual `.markdown-rendered .mermaid`.
+ */
+
+/* Structure: a theme must not move, pad, or scroll the stage. */
+.mermaid.mmk-host,
+.markdown-rendered .mermaid.mmk-host {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin-inline: 0;
+  padding: 0;
+  overflow: hidden;
+  transform: none;
+}
+
+/* Surface: left at the weaker selector, so a theme's own diagram surface carries over. */
+.mermaid.mmk-host {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+  background: var(--background-primary);
+}
+
+/*
+ * Beat core Live Preview:
+ * .markdown-source-view.mod-cm6 .cm-embed-block > .mermaid { overflow-x: auto }
+ * A nested scroller fights the plugin viewport and shows a second gutter.
+ */
+.markdown-source-view.mod-cm6 .cm-embed-block > .mermaid.mmk-host {
+  overflow: hidden;
+}
+
+/*
+ * Strip the default embed pad so Live Preview does not grow a second
+ * shell around the stage.
+ */
+.markdown-source-view.mod-cm6 .cm-embed-block.mmk-embed {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/*
+ * Obsidian 1.15 mounts its own zoom control (`.pele-zoom`: plus, minus,
+ * reset, stacked) in every `.mermaid`. The stage has its own toolbar and
+ * would only get a second set on top of "more" and "reset". Obsidian sets
+ * `display` inline and keeps re-attaching the node, so it is hidden with
+ * properties it never writes instead.
+ */
+.mermaid.mmk-host > .pele-zoom {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/*
+ * Core draws a hover outline around the embed block. The stage has its
+ * own frame, and the outline would also fence in the stage's margins.
+ */
+.markdown-source-view.mod-cm6 .cm-embed-block.mmk-embed:hover {
+  box-shadow: none;
+}
+
+/* Header band */
+
+.mmk-bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 4px 6px 4px 14px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  cursor: default;
+  user-select: none;
+}
+
+.mmk-kind {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 20px;
+}
+
+.mmk-hint {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  line-height: 20px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: opacity 0.4s ease;
+}
+
+/* Read once, or acted on: the hint leaves the band to the controls. */
+.mmk-hint.is-spent {
+  opacity: 0;
+}
+
+/*
+ * Most diagrams are read, not operated. The controls stay legible but
+ * recede until the pointer or the keyboard reaches the stage.
+ */
+.mmk-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  margin-left: auto;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.mmk-host:hover .mmk-actions,
+.mmk-host:focus-within .mmk-actions,
+.mmk-fs .mmk-actions {
+  opacity: 1;
+}
+
+.mmk-group {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.mmk-group + .mmk-group {
+  margin-left: 5px;
+  padding-left: 5px;
+  border-left: 1px solid var(--background-modifier-border);
+}
+
+/*
+ * The buttons carry Obsidian's `clickable-icon`, which keeps the generic
+ * bordered <button> rules off them. Everything below is the flat toolbar
+ * look, restated so it does not depend on a theme's icon-button skin.
+ */
+.mmk-bar .mmk-flair {
+  --icon-size: 15px;
+  --icon-stroke: 2px;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: auto;
+  height: auto;
+  min-width: 26px;
+  min-height: 26px;
+  margin: 0;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--radius-s, 4px);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  line-height: 20px;
+  opacity: 1;
+  cursor: pointer;
+  box-shadow: none;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.mmk-bar .mmk-flair:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.mmk-bar .mmk-flair:active {
+  background: var(--background-modifier-active-hover, var(--background-modifier-hover));
+  color: var(--text-normal);
+}
+
+.mmk-bar .mmk-flair:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+.mmk-bar .mmk-flair:disabled {
+  background: transparent;
+  color: var(--text-faint);
+  opacity: 0.6;
+  cursor: default;
+}
+
+/*
+ * Fit or Reset whose view is already showing. Not `disabled`: the button
+ * keeps focus, so a keyboard reader is not thrown out of the toolbar.
+ */
+.mmk-flair.is-current {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/*
+ * The bar lives inside `.mermaid`, so a theme's `.mermaid svg` sizing
+ * reaches the icons: auto width, or a min-width meant to keep a raw diagram
+ * readable on a phone. Three classes outrank that.
+ */
+.mmk-bar .mmk-flair .svg-icon {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+}
+
+/* The readout keeps its width while the number changes. */
+.mmk-bar .mmk-gauge {
+  min-width: 46px;
+}
+
+/* Stage */
+
+.mmk-viewport {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  height: var(--mmk-vh, auto);
+  /*
+   * Nothing to drag: a click opens the overlay, and the cursor says so.
+   * Not `zoom-in`: Chromium draws it from a private macOS cursor that
+   * flickers against the arrow on recent systems. `pointer` is native.
+   */
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+}
+
+.mmk-viewport--fs {
+  cursor: default;
+}
+
+.mmk-viewport.is-pannable {
+  cursor: grab;
+}
+
+.mmk-viewport.is-dragging {
+  cursor: grabbing;
+}
+
+.mmk-viewport:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+/*
+ * Edge shades. Each side that hides part of the diagram gets a soft
+ * shadow, so a cropped figure never passes for a complete one. One
+ * pseudo-element carries all four; a side is switched on by its size.
+ */
+.mmk-viewport::after {
+  --mmk-shade: var(--background-modifier-box-shadow, rgba(0, 0, 0, 0.1));
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(to bottom, var(--mmk-shade), transparent) top / 100% var(--mmk-clip-t, 0) no-repeat,
+    linear-gradient(to top, var(--mmk-shade), transparent) bottom / 100% var(--mmk-clip-b, 0) no-repeat,
+    linear-gradient(to right, var(--mmk-shade), transparent) left / var(--mmk-clip-l, 0) 100% no-repeat,
+    linear-gradient(to left, var(--mmk-shade), transparent) right / var(--mmk-clip-r, 0) 100% no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.mmk-viewport.is-clip-top::after {
+  --mmk-clip-t: 14px;
+}
+
+.mmk-viewport.is-clip-bottom::after {
+  --mmk-clip-b: 14px;
+}
+
+.mmk-viewport.is-clip-left::after {
+  --mmk-clip-l: 14px;
+}
+
+.mmk-viewport.is-clip-right::after {
+  --mmk-clip-r: 14px;
+}
+
+.mmk-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  transform-origin: 0 0;
+  transform: translate(var(--tx, 0px), var(--ty, 0px)) scale(var(--scale, 1));
+  will-change: transform;
+}
+
+.mmk-stage.is-animating {
+  transition: transform 0.18s ease;
+}
+
+.mmk-stage svg {
+  display: block;
+  margin: 0;
+  max-width: none;
+}
+
+/* Fullscreen overlay */
+
+.mmk-fs {
+  position: fixed;
+  inset: 0;
+  z-index: var(--layer-modal, 100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 32px;
+  background: rgba(0, 0, 0, 0.46);
+  animation: mmk-fade 0.14s ease-out;
+}
+
+.mmk-fs-doc {
+  display: flex;
+  width: min(90rem, 100%);
+  height: min(100%, calc(100vh - 64px));
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  animation: mmk-rise 0.18s ease-out;
+}
+
+.mmk-fs-doc > .mermaid.mmk-host {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  box-shadow: var(--shadow-l);
+}
+
+.mmk-fs .mmk-viewport {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.mmk-fs.is-closing {
+  animation: mmk-fade-out 0.14s ease-in forwards;
+  pointer-events: none;
+}
+
+@keyframes mmk-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mmk-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes mmk-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+
+@media (max-width: 700px) {
+  .mmk-hint {
+    display: none;
+  }
+
+  .mmk-fs {
+    padding: 12px;
+  }
+
+  .mmk-fs-doc {
+    height: min(100%, calc(100vh - 24px));
+  }
+}
+
+/*
+ * Dark mode. Obsidian inverts `.mermaid > svg` in a dark theme because
+ * Mermaid's stock palette is light. A staged drawing is no longer a direct
+ * child, so the stage repeats that for the stock palette, and both are
+ * switched off for drawings made in the theme's own colours.
+ */
+.theme-dark .mmk-stage > svg {
+  filter: invert(100%) hue-rotate(180deg) saturate(1.25);
+}
+
+.mmk-themed .mmk-stage > svg,
+.mmk-themed.theme-dark .mermaid > svg {
+  filter: none;
+}
+
+/* Template picker */
+
+.mmk-picker {
+  --dialog-width: min(54rem, 92vw);
+  width: var(--dialog-width);
+}
+
+.mmk-picker-search {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.mmk-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  max-height: 62vh;
+  /* Room for the focus ring of the cards on the edge. */
+  padding: 2px;
+  overflow-y: auto;
+}
+
+.mmk-picker-empty {
+  padding: 32px 0;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+  text-align: center;
+}
+
+.mmk-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 10px 10px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+  background: var(--background-primary);
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease;
+}
+
+.mmk-card:hover {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+
+.mmk-card:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+/* The drawing is a picture of the template, not a control: clicks belong to the card. */
+.mmk-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 104px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mmk-thumb svg {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+}
+
+/*
+ * Mermaid bakes a light palette into each drawing. Obsidian flips its own
+ * diagrams in a dark theme the same way, so the picture matches the result.
+ */
+.theme-dark .mmk-thumb {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+.mmk-themed .mmk-thumb {
+  filter: none;
+}
+
+.mmk-card-name {
+  overflow: hidden;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  line-height: 1.3;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* No hover to wake the controls up, so they stay at full strength. */
+@media (hover: none) {
+  .mmk-actions {
+    opacity: 1;
+  }
+}
+
+@media (pointer: coarse) {
+  .mmk-bar .mmk-flair {
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  /*
+   * A diagram that fits its viewport vertically must not trap the page
+   * scroll under a finger. Once it overflows, or in the overlay, the
+   * stage takes every gesture.
+   */
+  .mmk-viewport {
+    touch-action: pan-y;
+  }
+
+  .mmk-viewport.is-pannable-y,
+  .mmk-fs .mmk-viewport {
+    touch-action: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mmk-fs,
+  .mmk-fs-doc {
+    animation: none;
+  }
+
+  .mmk-stage.is-animating,
+  .mmk-bar .mmk-flair,
+  .mmk-actions,
+  .mmk-hint,
+  .mmk-card {
+    transition: none;
+  }
+}
+
+@media print {
+  .mmk-bar {
+    display: none;
+  }
+
+  .mmk-viewport {
+    overflow: visible;
+    height: auto;
+  }
+
+  .mmk-viewport::after {
+    display: none;
+  }
+
+  .mmk-stage {
+    position: static;
+    transform: none;
+  }
+
+  .mmk-fs {
+    display: none;
+  }
+}
